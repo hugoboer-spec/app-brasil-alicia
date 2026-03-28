@@ -12,41 +12,53 @@ st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
     
-    /* Botão Circular de Iniciar */
+    /* Faz a imagem ocupar a tela toda na Home */
+    .home-image-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        z-index: 1;
+    }
+    .home-image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Botão Circular Flutuante SOBRE a imagem */
     .btn-iniciar-container {
         position: fixed;
-        bottom: 50px;
-        right: 50px;
-        z-index: 1000;
+        bottom: 40px;
+        right: 40px;
+        z-index: 9999; /* Garante que fique por cima de tudo */
     }
-    .stButton > button {
-        width: 150px !important;
-        height: 150px !important;
+    
+    /* Estilo do Botão Iniciar */
+    div.stButton > button.btn-iniciar {
+        width: 140px !important;
+        height: 140px !important;
         border-radius: 50% !important;
         background-color: #ff4b4b !important;
         color: white !important;
-        font-size: 24px !important;
+        font-size: 22px !important;
         font-weight: bold !important;
-        border: 5px solid #ffffff !important;
-        box-shadow: 0px 10px 20px rgba(0,0,0,0.3) !important;
-        transition: 0.3s !important;
+        border: 4px solid #ffffff !important;
+        box-shadow: 0px 8px 15px rgba(0,0,0,0.4) !important;
+        cursor: pointer !important;
     }
-    .stButton > button:hover {
-        transform: scale(1.1) !important;
+    div.stButton > button.btn-iniciar:hover {
         background-color: #0077be !important;
+        transform: scale(1.05);
     }
 
-    /* Estilo para o Título Proporcional */
-    .titulo-container {
+    /* Estilo para a página do Mapa */
+    .map-header {
         display: flex;
         justify-content: center;
-        margin-bottom: 10px;
+        padding: 10px;
     }
-    .titulo-img {
-        max-width: 400px; /* Tamanho pequeno e proporcional */
-        height: auto;
-    }
-
     .sereia-msg {
         background-color: #f0f9ff;
         border-radius: 20px;
@@ -100,17 +112,20 @@ def carregar_mapa():
 
 geojson_brasil = carregar_mapa()
 
-# --- CONTROLE DE NAVEGAÇÃO ---
+# --- NAVEGAÇÃO ---
 if 'pagina' not in st.session_state: st.session_state.pagina = "Inicial"
 
-# --- PÁGINA INICIAL (MENINAS) ---
+# --- PÁGINA INICIAL ---
 if st.session_state.pagina == "Inicial":
+    # Imagem de fundo que cobre a tela
     try:
+        st.markdown(f'<div class="home-image-container"><img src="https://raw.githubusercontent.com/{st.query_params.get("user", "seu_usuario_github" )}/{st.query_params.get("repo", "app-brasil-alicia")}/main/meninas.png"></div>', unsafe_allow_html=True)
+        # Como o Streamlit tem dificuldade com caminhos locais em HTML, usamos o método padrão mas com CSS fixo
         st.image("meninas.png", use_container_width=True)
     except:
-        st.write("🧜‍♀️ (Certifique-se de que 'meninas.png' está no GitHub!)")
+        st.write("🧜‍♀️ (Meninas.png)")
     
-    # Botão Iniciar Circular no Canto
+    # Botão Iniciar sobre a imagem
     st.markdown('<div class="btn-iniciar-container">', unsafe_allow_html=True)
     if st.button("INICIAR 🚀", key="iniciar_btn"):
         st.session_state.pagina = "Mapa"
@@ -119,27 +134,25 @@ if st.session_state.pagina == "Inicial":
 
 # --- PÁGINA DO MAPA ---
 else:
-    # Título Pequeno e Proporcional (Alicia Homework)
+    # Título Pequeno Alicia Homework
     try:
-        _, col_titulo, _ = st.columns([1, 1, 1])
-        with col_titulo:
-            st.image("aliciahomework.png", use_container_width=True)
+        _, col_tit, _ = st.columns([1, 0.8, 1])
+        with col_tit: st.image("aliciahomework.png", use_container_width=True)
     except:
-        st.markdown('<p style="font-size:30px; text-align:center; color:#0077be;">🧜‍♀️ ALICIA HOMEWORK 🧜‍♀️</p>', unsafe_allow_html=True)
+        st.markdown('<h2 style="text-align:center;">ALICIA HOMEWORK</h2>', unsafe_allow_html=True)
 
-    # Botões Horizontais no Topo
+    # Botões de Controle
     if 'modo' not in st.session_state: st.session_state.modo = "Aprender"
-    col_btn1, col_btn2, col_btn3 = st.columns([2, 2, 1])
-    if col_btn1.button("📖 APRENDER"): st.session_state.modo = "Aprender"
-    if col_btn2.button("🎮 JOGAR"): 
+    c1, c2, c3 = st.columns([2, 2, 1])
+    if c1.button("📖 APRENDER"): st.session_state.modo = "Aprender"
+    if c2.button("🎮 JOGAR"): 
         st.session_state.modo = "Jogar"
         st.session_state.reset_quiz = True
-    if col_btn3.button("🏠 VOLTAR"):
+    if c3.button("🏠 VOLTAR"):
         st.session_state.pagina = "Inicial"
         st.rerun()
 
     st.write("---")
-
     col_mapa, col_info = st.columns([2, 1])
 
     with col_mapa:
@@ -185,7 +198,7 @@ else:
 
     with col_info:
         if st.session_state.modo == "Aprender":
-            st.markdown('<div class="sereia-msg">🧜‍♀️ "Alicia, toque no mapa para ver as capitais!"</div>', unsafe_allow_html=True)
+            st.markdown('<div class="sereia-msg">🧜‍♀️ "Alicia, toque no mapa!"</div>', unsafe_allow_html=True)
             if output and output.get("last_active_drawing"):
                 sigla = output["last_active_drawing"]["properties"]["sigla"]
                 info = estados_brasil[sigla]
@@ -198,13 +211,10 @@ else:
             
             if st.button("CONFIRMAR ✅"):
                 if escolha == resposta_correta:
-                    st.snow()
-                    st.success("PARABÉNS, ALICIA! VOCÊ ACERTOU TUDO! 🐠🐡")
-                    st.session_state.respondido = True
+                    st.snow(); st.success("PARABÉNS! 🐠"); st.session_state.respondido = True
                 else:
-                    st.error("Quase! Verifique bem o estado e a região! 🧜‍♀️")
+                    st.error("Quase! Tente de novo! 🧜‍♀️")
 
             if st.session_state.get('respondido'):
                 if st.button("PRÓXIMO ➡️"):
-                    st.session_state.reset_quiz = True
-                    st.rerun()
+                    st.session_state.reset_quiz = True; st.rerun()
