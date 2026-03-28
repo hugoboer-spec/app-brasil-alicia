@@ -5,18 +5,16 @@ import requests
 import random
 
 # Configurações para o iPad
-st.set_page_config(page_title="Alicia The Best", layout="wide")
+st.set_page_config(page_title="Alicia Homework", layout="wide")
 
 # --- ESTILO LIMPO E MÁGICO (CSS) ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
-    .alicia-header {
-        font-family: 'Comic Sans MS', cursive;
-        font-size: 55px;
-        color: #0077be;
-        text-align: center;
-        margin-bottom: 0px;
+    .centered-img {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px;
     }
     .sereia-msg {
         background-color: #f0f9ff;
@@ -42,12 +40,12 @@ st.markdown("""
         background-color: #0077be;
         color: white;
     }
-    /* Esconder Menu Lateral */
+    /* Esconder Menu Lateral Padrão */
     [data-testid="stSidebar"] { display: none; }
     </style>
     """, unsafe_allow_html=True)
 
-# 1. Dados dos Estados e Regiões (Cores Suaves)
+# 1. Dados dos Estados e Regiões
 estados_brasil = {
     "AC": {"nome": "Acre", "capital": "Rio Branco", "regiao": "Norte", "cor": "#4ade80"},
     "AL": {"nome": "Alagoas", "capital": "Maceió", "regiao": "Nordeste", "cor": "#f87171"},
@@ -77,6 +75,7 @@ estados_brasil = {
     "SE": {"nome": "Sergipe", "capital": "Aracaju", "regiao": "Nordeste", "cor": "#f87171"},
     "TO": {"nome": "Tocantins", "capital": "Palmas", "regiao": "Norte", "cor": "#4ade80"}
 }
+regioes_lista = ["Norte", "Nordeste", "Centro-Oeste", "Sudeste", "Sul"]
 
 @st.cache_data
 def carregar_mapa():
@@ -85,8 +84,11 @@ def carregar_mapa():
 
 geojson_brasil = carregar_mapa()
 
-# --- CABEÇALHO ---
-st.markdown('<p class="alicia-header">🧜‍♀️ ALICIA THE BEST 🧜‍♀️</p>', unsafe_allow_html=True)
+# --- CABEÇALHO COM IMAGEM ---
+try:
+    st.image("aliciahomework.png", use_container_width=True)
+except:
+    st.markdown('<p style="font-size:40px; text-align:center; color:#0077be;">🧜‍♀️ ALICIA HOMEWORK 🧜‍♀️</p>', unsafe_allow_html=True)
 
 # --- BOTÕES HORIZONTAIS NO TOPO ---
 if 'modo' not in st.session_state: st.session_state.modo = "Aprender"
@@ -103,7 +105,6 @@ col_mapa, col_info = st.columns([2, 1])
 
 with col_mapa:
     if st.session_state.modo == "Aprender":
-        # Mapa Perfeito e Centralizado
         m = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles="CartoDB positron",
                       zoom_control=False, scrollWheelZoom=False, dragging=False)
         folium.GeoJson(geojson_brasil, style_function=lambda x: {
@@ -112,11 +113,31 @@ with col_mapa:
         }).add_to(m)
         output = st_folium(m, width=700, height=600, key="mapa_aprender")
     else:
-        # Lógica do Quiz
         if 'estado_quiz' not in st.session_state or st.session_state.get('reset_quiz'):
             st.session_state.estado_quiz = random.choice(list(estados_brasil.keys()))
             st.session_state.reset_quiz = False
             st.session_state.respondido = False
+            
+            # Gerar 5 opções (1 correta + 4 erradas/pegadinhas)
+            sigla_alvo = st.session_state.estado_quiz
+            info_alvo = estados_brasil[sigla_alvo]
+            correta = f"{info_alvo['nome']} - {info_alvo['regiao']}"
+            
+            opcoes = [correta]
+            # Pegadinha: Mesmo estado, região errada
+            regiao_errada = random.choice([r for r in regioes_lista if r != info_alvo['regiao']])
+            opcoes.append(f"{info_alvo['nome']} - {regiao_errada}")
+            
+            # Outros estados aleatórios
+            outros_estados = random.sample([s for s in estados_brasil.keys() if s != sigla_alvo], 3)
+            for s in outros_estados:
+                info_s = estados_brasil[s]
+                # Pode ser região certa ou errada para dificultar
+                reg = random.choice(regioes_lista)
+                opcoes.append(f"{info_s['nome']} - {reg}")
+            
+            random.shuffle(opcoes)
+            st.session_state.opcoes_quiz = opcoes
 
         sigla_alvo = st.session_state.estado_quiz
         m_quiz = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles="CartoDB positron",
@@ -128,42 +149,36 @@ with col_mapa:
         st_folium(m_quiz, width=700, height=600, key="mapa_quiz")
 
 with col_info:
-    # Espaço para os desenhos da Alicia!
+    # Imagem das Meninas para decorar
     try:
-        st.image("desenho_alicia.png", use_container_width=True)
+        st.image("meninas.png", use_container_width=True)
     except:
-        st.write("🧜‍♀️ (Aqui aparecerão seus desenhos!)")
+        st.write("🧜‍♀️ (Aqui aparecerá o desenho das meninas!)")
 
     if st.session_state.modo == "Aprender":
         st.markdown('<div class="sereia-msg">🧜‍♀️ "Alicia, toque no mapa para ver as capitais!"</div>', unsafe_allow_html=True)
         if output and output.get("last_active_drawing"):
             sigla = output["last_active_drawing"]["properties"]["sigla"]
             info = estados_brasil[sigla]
-            st.success(f"### 📍 {info['nome']}\n**Capital:** {info['capital']}")
+            st.success(f"### 📍 {info['nome']}\n**Capital:** {info['capital']}\n**Região:** {info['regiao']}")
     else:
-        st.markdown('<div class="sereia-msg">🧜‍♀️ "Qual é o estado em azul?"</div>', unsafe_allow_html=True)
-        # Sorteio de opções dinâmico
-        sigla_alvo = st.session_state.estado_quiz
-        nome_alvo = estados_brasil[sigla_alvo]['nome']
+        st.markdown('<div class="sereia-msg">🧜‍♀️ "Qual é o estado em azul e sua região?"</div>', unsafe_allow_html=True)
         
-        # Gera opções apenas uma vez por rodada
-        if 'opcoes_quiz' not in st.session_state or st.session_state.get('reset_quiz'):
-            erradas = random.sample([s for s in estados_brasil.keys() if s != sigla_alvo], 2)
-            opcoes = [sigla_alvo] + erradas
-            random.shuffle(opcoes)
-            st.session_state.opcoes_quiz = [estados_brasil[o]['nome'] for o in opcoes]
-
-        escolha = st.radio("Escolha:", st.session_state.opcoes_quiz)
+        info_alvo = estados_brasil[st.session_state.estado_quiz]
+        resposta_correta = f"{info_alvo['nome']} - {info_alvo['regiao']}"
+        
+        escolha = st.radio("Escolha a opção correta:", st.session_state.opcoes_quiz)
         
         if st.button("CONFIRMAR ✅"):
-            if escolha == nome_alvo:
+            if escolha == resposta_correta:
                 st.snow()
-                st.success("VOCÊ ACERTOU! 🐠")
+                st.success("PARABÉNS, ALICIA! VOCÊ ACERTOU TUDO! 🐠🐡")
                 st.session_state.respondido = True
             else:
-                st.error("Tente de novo! 🧜‍♀️")
+                st.error("Quase! Verifique bem o estado e a região! 🧜‍♀️")
 
         if st.session_state.get('respondido'):
             if st.button("PRÓXIMO ➡️"):
                 st.session_state.reset_quiz = True
                 st.rerun()
+
