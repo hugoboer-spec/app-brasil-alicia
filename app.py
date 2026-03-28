@@ -7,27 +7,37 @@ import random
 # Configurações para o iPad
 st.set_page_config(page_title="Alicia Homework", layout="wide")
 
-# --- ESTILO LIMPO E MÁGICO (CSS) ---
+# --- ESTILO CSS PERSONALIZADO ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
-    .centered-img {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 20px;
+    
+    /* Botão Circular de Iniciar */
+    .btn-iniciar-container {
+        position: fixed;
+        bottom: 50px;
+        right: 50px;
+        z-index: 1000;
     }
-    .sereia-msg {
-        background-color: #f0f9ff;
-        border-radius: 20px;
-        padding: 15px;
-        border: 2px solid #0077be;
-        font-size: 22px;
-        color: #0369a1;
-        margin-bottom: 20px;
-        text-align: center;
+    .stButton > button.btn-iniciar {
+        width: 150px !important;
+        height: 150px !important;
+        border-radius: 50% !important;
+        background-color: #ff4b4b !important;
+        color: white !important;
+        font-size: 24px !important;
+        font-weight: bold !important;
+        border: 5px solid #ffffff !important;
+        box-shadow: 0px 10px 20px rgba(0,0,0,0.3) !important;
+        transition: 0.3s !important;
     }
-    /* Botões Horizontais no Topo */
-    div.stButton > button {
+    .stButton > button.btn-iniciar:hover {
+        transform: scale(1.1) !important;
+        background-color: #0077be !important;
+    }
+
+    /* Botões Horizontais no Topo (Mapa) */
+    .top-btns div.stButton > button {
         height: 70px;
         font-size: 22px !important;
         font-weight: bold;
@@ -36,11 +46,17 @@ st.markdown("""
         background-color: #ffffff;
         color: #0077be;
     }
-    div.stButton > button:hover {
-        background-color: #0077be;
-        color: white;
+    
+    .sereia-msg {
+        background-color: #f0f9ff;
+        border-radius: 20px;
+        padding: 15px;
+        border: 2px solid #0077be;
+        font-size: 22px;
+        color: #0369a1;
+        text-align: center;
+        margin-bottom: 20px;
     }
-    /* Esconder Menu Lateral Padrão */
     [data-testid="stSidebar"] { display: none; }
     </style>
     """, unsafe_allow_html=True)
@@ -84,101 +100,111 @@ def carregar_mapa():
 
 geojson_brasil = carregar_mapa()
 
-# --- CABEÇALHO COM IMAGEM ---
-try:
-    st.image("aliciahomework.png", use_container_width=True)
-except:
-    st.markdown('<p style="font-size:40px; text-align:center; color:#0077be;">🧜‍♀️ ALICIA HOMEWORK 🧜‍♀️</p>', unsafe_allow_html=True)
+# --- CONTROLE DE NAVEGAÇÃO ---
+if 'pagina' not in st.session_state: st.session_state.pagina = "Inicial"
 
-# --- BOTÕES HORIZONTAIS NO TOPO ---
-if 'modo' not in st.session_state: st.session_state.modo = "Aprender"
-col_btn1, col_btn2 = st.columns(2)
-if col_btn1.button("📖 APRENDER"): st.session_state.modo = "Aprender"
-if col_btn2.button("🎮 JOGAR"): 
-    st.session_state.modo = "Jogar"
-    st.session_state.reset_quiz = True
-
-st.write("---")
-
-# --- CONTEÚDO LADO A LADO ---
-col_mapa, col_info = st.columns([2, 1])
-
-with col_mapa:
-    if st.session_state.modo == "Aprender":
-        m = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles="CartoDB positron",
-                      zoom_control=False, scrollWheelZoom=False, dragging=False)
-        folium.GeoJson(geojson_brasil, style_function=lambda x: {
-            'fillColor': estados_brasil.get(x['properties']['sigla'], {}).get('cor', '#eee'),
-            'color': 'white', 'weight': 1, 'fillOpacity': 0.8
-        }).add_to(m)
-        output = st_folium(m, width=700, height=600, key="mapa_aprender")
-    else:
-        if 'estado_quiz' not in st.session_state or st.session_state.get('reset_quiz'):
-            st.session_state.estado_quiz = random.choice(list(estados_brasil.keys()))
-            st.session_state.reset_quiz = False
-            st.session_state.respondido = False
-            
-            # Gerar 5 opções (1 correta + 4 erradas/pegadinhas)
-            sigla_alvo = st.session_state.estado_quiz
-            info_alvo = estados_brasil[sigla_alvo]
-            correta = f"{info_alvo['nome']} - {info_alvo['regiao']}"
-            
-            opcoes = [correta]
-            # Pegadinha: Mesmo estado, região errada
-            regiao_errada = random.choice([r for r in regioes_lista if r != info_alvo['regiao']])
-            opcoes.append(f"{info_alvo['nome']} - {regiao_errada}")
-            
-            # Outros estados aleatórios
-            outros_estados = random.sample([s for s in estados_brasil.keys() if s != sigla_alvo], 3)
-            for s in outros_estados:
-                info_s = estados_brasil[s]
-                # Pode ser região certa ou errada para dificultar
-                reg = random.choice(regioes_lista)
-                opcoes.append(f"{info_s['nome']} - {reg}")
-            
-            random.shuffle(opcoes)
-            st.session_state.opcoes_quiz = opcoes
-
-        sigla_alvo = st.session_state.estado_quiz
-        m_quiz = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles="CartoDB positron",
-                           zoom_control=False, scrollWheelZoom=False, dragging=False)
-        folium.GeoJson(geojson_brasil, style_function=lambda x: {
-            'fillColor': '#3b82f6' if x['properties']['sigla'] == sigla_alvo else '#f3f4f6',
-            'color': 'white', 'weight': 2, 'fillOpacity': 0.9 if x['properties']['sigla'] == sigla_alvo else 0.4
-        }).add_to(m_quiz)
-        st_folium(m_quiz, width=700, height=600, key="mapa_quiz")
-
-with col_info:
-    # Imagem das Meninas para decorar
+# --- PÁGINA INICIAL ---
+if st.session_state.pagina == "Inicial":
     try:
         st.image("meninas.png", use_container_width=True)
     except:
-        st.write("🧜‍♀️ (Aqui aparecerá o desenho das meninas!)")
+        st.write("🧜‍♀️ (Suba a imagem 'meninas.png' para o GitHub!)")
+    
+    # Botão Iniciar Circular
+    st.markdown('<div class="btn-iniciar-container">', unsafe_allow_html=True)
+    if st.button("INICIAR 🚀", key="iniciar_btn", help="Clique para começar!", use_container_width=False):
+        st.session_state.pagina = "Mapa"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    if st.session_state.modo == "Aprender":
-        st.markdown('<div class="sereia-msg">🧜‍♀️ "Alicia, toque no mapa para ver as capitais!"</div>', unsafe_allow_html=True)
-        if output and output.get("last_active_drawing"):
-            sigla = output["last_active_drawing"]["properties"]["sigla"]
-            info = estados_brasil[sigla]
-            st.success(f"### 📍 {info['nome']}\n**Capital:** {info['capital']}\n**Região:** {info['regiao']}")
-    else:
-        st.markdown('<div class="sereia-msg">🧜‍♀️ "Qual é o estado em azul e sua região?"</div>', unsafe_allow_html=True)
-        
-        info_alvo = estados_brasil[st.session_state.estado_quiz]
-        resposta_correta = f"{info_alvo['nome']} - {info_alvo['regiao']}"
-        
-        escolha = st.radio("Escolha a opção correta:", st.session_state.opcoes_quiz)
-        
-        if st.button("CONFIRMAR ✅"):
-            if escolha == resposta_correta:
-                st.snow()
-                st.success("PARABÉNS, ALICIA! VOCÊ ACERTOU TUDO! 🐠🐡")
-                st.session_state.respondido = True
-            else:
-                st.error("Quase! Verifique bem o estado e a região! 🧜‍♀️")
+# --- PÁGINA DO MAPA ---
+else:
+    # Cabeçalho Alicia Homework
+    try:
+        st.image("aliciahomework.png", use_container_width=True)
+    except:
+        st.markdown('<p style="font-size:40px; text-align:center; color:#0077be;">🧜‍♀️ ALICIA HOMEWORK 🧜‍♀️</p>', unsafe_allow_html=True)
 
-        if st.session_state.get('respondido'):
-            if st.button("PRÓXIMO ➡️"):
-                st.session_state.reset_quiz = True
-                st.rerun()
+    # Botões Horizontais no Topo
+    if 'modo' not in st.session_state: st.session_state.modo = "Aprender"
+    st.markdown('<div class="top-btns">', unsafe_allow_html=True)
+    col_btn1, col_btn2, col_btn3 = st.columns([2, 2, 1])
+    if col_btn1.button("📖 APRENDER"): st.session_state.modo = "Aprender"
+    if col_btn2.button("🎮 JOGAR"): 
+        st.session_state.modo = "Jogar"
+        st.session_state.reset_quiz = True
+    if col_btn3.button("🏠 VOLTAR"):
+        st.session_state.pagina = "Inicial"
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
+    st.write("---")
+
+    col_mapa, col_info = st.columns([2, 1])
+
+    with col_mapa:
+        if st.session_state.modo == "Aprender":
+            m = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles="CartoDB positron",
+                          zoom_control=False, scrollWheelZoom=False, dragging=False)
+            folium.GeoJson(geojson_brasil, style_function=lambda x: {
+                'fillColor': estados_brasil.get(x['properties']['sigla'], {}).get('cor', '#eee'),
+                'color': 'white', 'weight': 1, 'fillOpacity': 0.8
+            }).add_to(m)
+            output = st_folium(m, width=700, height=600, key="mapa_aprender")
+        else:
+            if 'estado_quiz' not in st.session_state or st.session_state.get('reset_quiz'):
+                st.session_state.estado_quiz = random.choice(list(estados_brasil.keys()))
+                st.session_state.reset_quiz = False
+                st.session_state.respondido = False
+                
+                sigla_alvo = st.session_state.estado_quiz
+                info_alvo = estados_brasil[sigla_alvo]
+                correta = f"{info_alvo['nome']} - {info_alvo['regiao']}"
+                
+                opcoes = [correta]
+                regiao_errada = random.choice([r for r in regioes_lista if r != info_alvo['regiao']])
+                opcoes.append(f"{info_alvo['nome']} - {regiao_errada}")
+                
+                outros_estados = random.sample([s for s in estados_brasil.keys() if s != sigla_alvo], 3)
+                for s in outros_estados:
+                    info_s = estados_brasil[s]
+                    reg = random.choice(regioes_lista)
+                    opcoes.append(f"{info_s['nome']} - {reg}")
+                
+                random.shuffle(opcoes)
+                st.session_state.opcoes_quiz = opcoes
+
+            sigla_alvo = st.session_state.estado_quiz
+            m_quiz = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles="CartoDB positron",
+                               zoom_control=False, scrollWheelZoom=False, dragging=False)
+            folium.GeoJson(geojson_brasil, style_function=lambda x: {
+                'fillColor': '#3b82f6' if x['properties']['sigla'] == sigla_alvo else '#f3f4f6',
+                'color': 'white', 'weight': 2, 'fillOpacity': 0.9 if x['properties']['sigla'] == sigla_alvo else 0.4
+            }).add_to(m_quiz)
+            st_folium(m_quiz, width=700, height=600, key="mapa_quiz")
+
+    with col_info:
+        if st.session_state.modo == "Aprender":
+            st.markdown('<div class="sereia-msg">🧜‍♀️ "Alicia, toque no mapa para ver as capitais!"</div>', unsafe_allow_html=True)
+            if output and output.get("last_active_drawing"):
+                sigla = output["last_active_drawing"]["properties"]["sigla"]
+                info = estados_brasil[sigla]
+                st.success(f"### 📍 {info['nome']}\n**Capital:** {info['capital']}\n**Região:** {info['regiao']}")
+        else:
+            st.markdown('<div class="sereia-msg">🧜‍♀️ "Qual é o estado em azul e sua região?"</div>', unsafe_allow_html=True)
+            info_alvo = estados_brasil[st.session_state.estado_quiz]
+            resposta_correta = f"{info_alvo['nome']} - {info_alvo['regiao']}"
+            escolha = st.radio("Escolha a opção correta:", st.session_state.opcoes_quiz)
+            
+            if st.button("CONFIRMAR ✅"):
+                if escolha == resposta_correta:
+                    st.snow()
+                    st.success("PARABÉNS, ALICIA! VOCÊ ACERTOU TUDO! 🐠🐡")
+                    st.session_state.respondido = True
+                else:
+                    st.error("Quase! Verifique bem o estado e a região! 🧜‍♀️")
+
+            if st.session_state.get('respondido'):
+                if st.button("PRÓXIMO ➡️"):
+                    st.session_state.reset_quiz = True
+                    st.rerun()
