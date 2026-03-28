@@ -1,126 +1,169 @@
 import streamlit as st
-from PIL import Image
-from streamlit_image_coordinates import streamlit_image_coordinates
+import folium
+from streamlit_folium import st_folium
+import requests
 import random
 
-# Configurações da Página
-st.set_page_config(page_title="Alicia School Homework", layout="wide")
+# Configurações para o iPad
+st.set_page_config(page_title="Alicia The Best", layout="wide")
 
-# --- ESTILO LIMPO E MÁGICO ---
+# --- ESTILO LIMPO E MÁGICO (CSS) ---
 st.markdown("""
     <style>
-    .stApp { background-color: #fdf6e3; }
-    /* Botões grandes na lateral */
-    div.stButton > button {
-        width: 100%; height: 70px; font-size: 22px !important;
-        font-weight: bold; border-radius: 15px;
-        border: 3px solid #0077be; background-color: #e0f2fe; color: #0369a1;
+    .stApp { background-color: #ffffff; }
+    .alicia-header {
+        font-family: 'Comic Sans MS', cursive;
+        font-size: 55px;
+        color: #0077be;
+        text-align: center;
+        margin-bottom: 0px;
     }
     .sereia-msg {
-        background-color: #ffffff; border-radius: 20px; padding: 15px;
-        border: 2px solid #0077be; font-size: 22px; color: #0369a1;
-        text-align: center; margin-bottom: 20px;
+        background-color: #f0f9ff;
+        border-radius: 20px;
+        padding: 15px;
+        border: 2px solid #0077be;
+        font-size: 22px;
+        color: #0369a1;
+        margin-bottom: 20px;
+        text-align: center;
     }
+    /* Botões Horizontais no Topo */
+    div.stButton > button {
+        height: 70px;
+        font-size: 22px !important;
+        font-weight: bold;
+        border-radius: 30px;
+        border: 3px solid #0077be;
+        background-color: #ffffff;
+        color: #0077be;
+    }
+    div.stButton > button:hover {
+        background-color: #0077be;
+        color: white;
+    }
+    /* Esconder Menu Lateral */
+    [data-testid="stSidebar"] { display: none; }
     </style>
     """, unsafe_allow_html=True)
 
-# 1. TABELA MÁGICA DE COORDENADAS (Recalibrada com seus dados!)
-# Baseado em AM(473,306), SP(782,566), CE(949,311)
-dados_estados = {
-    "AM": {"nome": "Amazonas", "capital": "Manaus", "x": 473, "y": 306},
-    "PA": {"nome": "Pará", "capital": "Belém", "x": 670, "y": 315},
-    "RR": {"nome": "Roraima", "capital": "Boa Vista", "x": 490, "y": 215},
-    "AP": {"nome": "Amapá", "capital": "Macapá", "x": 665, "y": 230},
-    "AC": {"nome": "Acre", "capital": "Rio Branco", "x": 335, "y": 420},
-    "RO": {"nome": "Rondônia", "capital": "Porto Velho", "x": 455, "y": 445},
-    "MT": {"nome": "Mato Grosso", "capital": "Cuiabá", "x": 615, "y": 465},
-    "MS": {"nome": "Mato Grosso do Sul", "capital": "Campo Grande", "x": 615, "y": 615},
-    "GO": {"nome": "Goiás", "capital": "Goiânia", "x": 710, "y": 510},
-    "DF": {"nome": "Distrito Federal", "capital": "Brasília", "x": 745, "y": 490},
-    "TO": {"nome": "Tocantins", "capital": "Palmas", "x": 735, "y": 415},
-    "MA": {"nome": "Maranhão", "capital": "São Luís", "regiao": "Nordeste", "x": 795, "y": 320},
-    "PI": {"nome": "Piauí", "capital": "Teresina", "x": 845, "y": 375},
-    "CE": {"nome": "Ceará", "capital": "Fortaleza", "x": 949, "y": 311},
-    "RN": {"nome": "Rio Grande do Norte", "capital": "Natal", "x": 1005, "y": 355},
-    "PB": {"nome": "Paraíba", "capital": "João Pessoa", "x": 1005, "y": 400},
-    "PE": {"nome": "Pernambuco", "capital": "Recife", "x": 1005, "y": 445},
-    "AL": {"nome": "Alagoas", "capital": "Maceió", "x": 995, "y": 480},
-    "SE": {"nome": "Sergipe", "capital": "Aracaju", "x": 985, "y": 515},
-    "BA": {"nome": "Bahia", "capital": "Salvador", "x": 860, "y": 485},
-    "MG": {"nome": "Minas Gerais", "capital": "Belo Horizonte", "x": 815, "y": 585},
-    "ES": {"nome": "Espírito Santo", "capital": "Vitória", "x": 890, "y": 635},
-    "RJ": {"nome": "Rio de Janeiro", "capital": "Rio de Janeiro", "x": 845, "y": 680},
-    "SP": {"nome": "São Paulo", "capital": "São Paulo", "x": 782, "y": 566},
-    "PR": {"nome": "Paraná", "capital": "Curitiba", "x": 715, "y": 685},
-    "SC": {"nome": "Santa Catarina", "capital": "Florianópolis", "x": 740, "y": 745},
-    "RS": {"nome": "Rio Grande do Sul", "capital": "Porto Alegre", "x": 665, "y": 795},
+# 1. Dados dos Estados e Regiões (Cores Suaves)
+estados_brasil = {
+    "AC": {"nome": "Acre", "capital": "Rio Branco", "regiao": "Norte", "cor": "#4ade80"},
+    "AL": {"nome": "Alagoas", "capital": "Maceió", "regiao": "Nordeste", "cor": "#f87171"},
+    "AP": {"nome": "Amapá", "capital": "Macapá", "regiao": "Norte", "cor": "#4ade80"},
+    "AM": {"nome": "Amazonas", "capital": "Manaus", "regiao": "Norte", "cor": "#4ade80"},
+    "BA": {"nome": "Bahia", "capital": "Salvador", "regiao": "Nordeste", "cor": "#f87171"},
+    "CE": {"nome": "Ceará", "capital": "Fortaleza", "regiao": "Nordeste", "cor": "#f87171"},
+    "DF": {"nome": "Distrito Federal", "capital": "Brasília", "regiao": "Centro-Oeste", "cor": "#fbbf24"},
+    "ES": {"nome": "Espírito Santo", "capital": "Vitória", "regiao": "Sudeste", "cor": "#60a5fa"},
+    "GO": {"nome": "Goiás", "capital": "Goiânia", "regiao": "Centro-Oeste", "cor": "#fbbf24"},
+    "MA": {"nome": "Maranhão", "capital": "São Luís", "regiao": "Nordeste", "cor": "#f87171"},
+    "MT": {"nome": "Mato Grosso", "capital": "Cuiabá", "regiao": "Centro-Oeste", "cor": "#fbbf24"},
+    "MS": {"nome": "Mato Grosso do Sul", "capital": "Campo Grande", "regiao": "Centro-Oeste", "cor": "#fbbf24"},
+    "MG": {"nome": "Minas Gerais", "capital": "Belo Horizonte", "regiao": "Sudeste", "cor": "#60a5fa"},
+    "PA": {"nome": "Pará", "capital": "Belém", "regiao": "Norte", "cor": "#4ade80"},
+    "PB": {"nome": "Paraíba", "capital": "João Pessoa", "regiao": "Nordeste", "cor": "#f87171"},
+    "PR": {"nome": "Paraná", "capital": "Curitiba", "regiao": "Sul", "cor": "#a78bfa"},
+    "PE": {"nome": "Pernambuco", "capital": "Recife", "regiao": "Nordeste", "cor": "#f87171"},
+    "PI": {"nome": "Piauí", "capital": "Teresina", "regiao": "Nordeste", "cor": "#f87171"},
+    "RJ": {"nome": "Rio de Janeiro", "capital": "Rio de Janeiro", "regiao": "Sudeste", "cor": "#60a5fa"},
+    "RN": {"nome": "Rio Grande do Norte", "capital": "Natal", "regiao": "Nordeste", "cor": "#f87171"},
+    "RS": {"nome": "Rio Grande do Sul", "capital": "Porto Alegre", "regiao": "Sul", "cor": "#a78bfa"},
+    "RO": {"nome": "Rondônia", "capital": "Porto Velho", "regiao": "Norte", "cor": "#4ade80"},
+    "RR": {"nome": "Roraima", "capital": "Boa Vista", "regiao": "Norte", "cor": "#4ade80"},
+    "SC": {"nome": "Santa Catarina", "capital": "Florianópolis", "regiao": "Sul", "cor": "#a78bfa"},
+    "SP": {"nome": "São Paulo", "capital": "São Paulo", "regiao": "Sudeste", "cor": "#60a5fa"},
+    "SE": {"nome": "Sergipe", "capital": "Aracaju", "regiao": "Nordeste", "cor": "#f87171"},
+    "TO": {"nome": "Tocantins", "capital": "Palmas", "regiao": "Norte", "cor": "#4ade80"}
 }
 
-# --- INTERFACE ---
+@st.cache_data
+def carregar_mapa():
+    url = "https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson"
+    return requests.get(url ).json()
+
+geojson_brasil = carregar_mapa()
+
+# --- CABEÇALHO ---
+st.markdown('<p class="alicia-header">🧜‍♀️ ALICIA THE BEST 🧜‍♀️</p>', unsafe_allow_html=True)
+
+# --- BOTÕES HORIZONTAIS NO TOPO ---
 if 'modo' not in st.session_state: st.session_state.modo = "Aprender"
+col_btn1, col_btn2 = st.columns(2)
+if col_btn1.button("📖 APRENDER"): st.session_state.modo = "Aprender"
+if col_btn2.button("🎮 JOGAR"): 
+    st.session_state.modo = "Jogar"
+    st.session_state.reset_quiz = True
 
-col_menu, col_mapa = st.columns([1, 4])
+st.write("---")
 
-with col_menu:
-    st.markdown("### 🧜‍♀️ ALICIA THE BEST")
-    if st.button("📖 APRENDER"): 
-        st.session_state.modo = "Aprender"
-        st.rerun()
-    if st.button("🎮 JOGAR QUIZ"): 
-        st.session_state.modo = "Jogar"
-        st.session_state.reset = True
-        st.rerun()
-    
-    st.write("---")
-    if st.session_state.modo == "Aprender":
-        st.markdown('<div class="sereia-msg">🧜‍♀️ "Alicia, toque nas siglas do mapa!"</div>', unsafe_allow_html=True)
-    else:
-        if 'alvo' in st.session_state:
-            st.markdown(f'<div class="sereia-msg">🧜‍♀️ "Onde fica: <b>{dados_estados[st.session_state.alvo]["nome"]}</b>?"</div>', unsafe_allow_html=True)
+# --- CONTEÚDO LADO A LADO ---
+col_mapa, col_info = st.columns([2, 1])
 
 with col_mapa:
+    if st.session_state.modo == "Aprender":
+        # Mapa Perfeito e Centralizado
+        m = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles="CartoDB positron",
+                      zoom_control=False, scrollWheelZoom=False, dragging=False)
+        folium.GeoJson(geojson_brasil, style_function=lambda x: {
+            'fillColor': estados_brasil.get(x['properties']['sigla'], {}).get('cor', '#eee'),
+            'color': 'white', 'weight': 1, 'fillOpacity': 0.8
+        }).add_to(m)
+        output = st_folium(m, width=700, height=600, key="mapa_aprender")
+    else:
+        # Lógica do Quiz
+        if 'estado_quiz' not in st.session_state or st.session_state.get('reset_quiz'):
+            st.session_state.estado_quiz = random.choice(list(estados_brasil.keys()))
+            st.session_state.reset_quiz = False
+            st.session_state.respondido = False
+
+        sigla_alvo = st.session_state.estado_quiz
+        m_quiz = folium.Map(location=[-15.0, -55.0], zoom_start=4, tiles="CartoDB positron",
+                           zoom_control=False, scrollWheelZoom=False, dragging=False)
+        folium.GeoJson(geojson_brasil, style_function=lambda x: {
+            'fillColor': '#3b82f6' if x['properties']['sigla'] == sigla_alvo else '#f3f4f6',
+            'color': 'white', 'weight': 2, 'fillOpacity': 0.9 if x['properties']['sigla'] == sigla_alvo else 0.4
+        }).add_to(m_quiz)
+        st_folium(m_quiz, width=700, height=600, key="mapa_quiz")
+
+with col_info:
+    # Espaço para os desenhos da Alicia!
     try:
-        img = Image.open("mapa_alicia.png")
-        # Captura o toque
-        value = streamlit_image_coordinates(img, key="mapa_final")
+        st.image("desenho_alicia.png", use_container_width=True)
+    except:
+        st.write("🧜‍♀️ (Aqui aparecerão seus desenhos!)")
+
+    if st.session_state.modo == "Aprender":
+        st.markdown('<div class="sereia-msg">🧜‍♀️ "Alicia, toque no mapa para ver as capitais!"</div>', unsafe_allow_html=True)
+        if output and output.get("last_active_drawing"):
+            sigla = output["last_active_drawing"]["properties"]["sigla"]
+            info = estados_brasil[sigla]
+            st.success(f"### 📍 {info['nome']}\n**Capital:** {info['capital']}")
+    else:
+        st.markdown('<div class="sereia-msg">🧜‍♀️ "Qual é o estado em azul?"</div>', unsafe_allow_html=True)
+        # Sorteio de opções dinâmico
+        sigla_alvo = st.session_state.estado_quiz
+        nome_alvo = estados_brasil[sigla_alvo]['nome']
         
-        if value:
-            click_x, click_y = value["x"], value["y"]
-            estado_clicado = None
-            raio = 50 # Raio de clique ajustado
-            
-            for sigla, pos in dados_estados.items():
-                dist = ((click_x - pos["x"])**2 + (click_y - pos["y"])**2)**0.5
-                if dist < raio:
-                    estado_clicado = sigla
-                    break
-            
-            if estado_clicado:
-                info = dados_estados[estado_clicado]
-                if st.session_state.modo == "Aprender":
-                    st.balloons()
-                    st.success(f"🧜‍♀️ **{info['nome']}** | Capital: **{info['capital']}**")
-                else:
-                    if estado_clicado == st.session_state.alvo:
-                        st.snow()
-                        st.success(f"🧜‍♀️ ISSO AÍ! Você achou o {info['nome']}! 🎉")
-                        if st.button("PRÓXIMO ESTADO ➡️"):
-                            st.session_state.reset = True
-                            st.rerun()
-                    else:
-                        st.error("🧜‍♀️ Quase! Procure a sigla certa no mapa!")
+        # Gera opções apenas uma vez por rodada
+        if 'opcoes_quiz' not in st.session_state or st.session_state.get('reset_quiz'):
+            erradas = random.sample([s for s in estados_brasil.keys() if s != sigla_alvo], 2)
+            opcoes = [sigla_alvo] + erradas
+            random.shuffle(opcoes)
+            st.session_state.opcoes_quiz = [estados_brasil[o]['nome'] for o in opcoes]
+
+        escolha = st.radio("Escolha:", st.session_state.opcoes_quiz)
+        
+        if st.button("CONFIRMAR ✅"):
+            if escolha == nome_alvo:
+                st.snow()
+                st.success("VOCÊ ACERTOU! 🐠")
+                st.session_state.respondido = True
             else:
-                st.info("🧜‍♀️ Tente tocar bem em cima das letras (ex: AM, SP, CE)!")
-                
-        st.image(img, use_container_width=True)
+                st.error("Tente de novo! 🧜‍♀️")
 
-    except Exception as e:
-        st.error("Certifique-se de que o arquivo 'mapa_alicia.png' está no seu GitHub!")
-
-# Lógica de sorteio do Quiz
-if st.session_state.modo == "Jogar":
-    if 'alvo' not in st.session_state or st.session_state.get('reset'):
-        st.session_state.alvo = random.choice(list(dados_estados.keys()))
-        st.session_state.reset = False
-        st.rerun()
-
+        if st.session_state.get('respondido'):
+            if st.button("PRÓXIMO ➡️"):
+                st.session_state.reset_quiz = True
+                st.rerun()
