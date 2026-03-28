@@ -19,7 +19,7 @@ st.markdown("""
         right: 50px;
         z-index: 1000;
     }
-    .stButton > button.btn-iniciar {
+    .stButton > button {
         width: 150px !important;
         height: 150px !important;
         border-radius: 50% !important;
@@ -31,22 +31,22 @@ st.markdown("""
         box-shadow: 0px 10px 20px rgba(0,0,0,0.3) !important;
         transition: 0.3s !important;
     }
-    .stButton > button.btn-iniciar:hover {
+    .stButton > button:hover {
         transform: scale(1.1) !important;
         background-color: #0077be !important;
     }
 
-    /* Botões Horizontais no Topo (Mapa) */
-    .top-btns div.stButton > button {
-        height: 70px;
-        font-size: 22px !important;
-        font-weight: bold;
-        border-radius: 30px;
-        border: 3px solid #0077be;
-        background-color: #ffffff;
-        color: #0077be;
+    /* Estilo para o Título Proporcional */
+    .titulo-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 10px;
     }
-    
+    .titulo-img {
+        max-width: 400px; /* Tamanho pequeno e proporcional */
+        height: auto;
+    }
+
     .sereia-msg {
         background-color: #f0f9ff;
         border-radius: 20px;
@@ -103,31 +103,32 @@ geojson_brasil = carregar_mapa()
 # --- CONTROLE DE NAVEGAÇÃO ---
 if 'pagina' not in st.session_state: st.session_state.pagina = "Inicial"
 
-# --- PÁGINA INICIAL ---
+# --- PÁGINA INICIAL (MENINAS) ---
 if st.session_state.pagina == "Inicial":
     try:
         st.image("meninas.png", use_container_width=True)
     except:
-        st.write("🧜‍♀️ (Suba a imagem 'meninas.png' para o GitHub!)")
+        st.write("🧜‍♀️ (Certifique-se de que 'meninas.png' está no GitHub!)")
     
-    # Botão Iniciar Circular
+    # Botão Iniciar Circular no Canto
     st.markdown('<div class="btn-iniciar-container">', unsafe_allow_html=True)
-    if st.button("INICIAR 🚀", key="iniciar_btn", help="Clique para começar!", use_container_width=False):
+    if st.button("INICIAR 🚀", key="iniciar_btn"):
         st.session_state.pagina = "Mapa"
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --- PÁGINA DO MAPA ---
 else:
-    # Cabeçalho Alicia Homework
+    # Título Pequeno e Proporcional (Alicia Homework)
     try:
-        st.image("aliciahomework.png", use_container_width=True)
+        _, col_titulo, _ = st.columns([1, 1, 1])
+        with col_titulo:
+            st.image("aliciahomework.png", use_container_width=True)
     except:
-        st.markdown('<p style="font-size:40px; text-align:center; color:#0077be;">🧜‍♀️ ALICIA HOMEWORK 🧜‍♀️</p>', unsafe_allow_html=True)
+        st.markdown('<p style="font-size:30px; text-align:center; color:#0077be;">🧜‍♀️ ALICIA HOMEWORK 🧜‍♀️</p>', unsafe_allow_html=True)
 
     # Botões Horizontais no Topo
     if 'modo' not in st.session_state: st.session_state.modo = "Aprender"
-    st.markdown('<div class="top-btns">', unsafe_allow_html=True)
     col_btn1, col_btn2, col_btn3 = st.columns([2, 2, 1])
     if col_btn1.button("📖 APRENDER"): st.session_state.modo = "Aprender"
     if col_btn2.button("🎮 JOGAR"): 
@@ -136,7 +137,6 @@ else:
     if col_btn3.button("🏠 VOLTAR"):
         st.session_state.pagina = "Inicial"
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
     st.write("---")
 
